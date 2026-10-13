@@ -73,4 +73,9 @@
       <Filter>Файлы ресурсов</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="Фото задания.jpg">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

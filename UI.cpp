@@ -83,7 +83,7 @@ void printInstructions(const std::string& helpFile) {
 std::string selectSourceFileStep() {
     system("cls");
     std::cout << " ВЫБОР ВХОДНОГО ФАЙЛА:\n\n";
-    std::cout << " 1. test_poem.txt (Стих с причастиями и деепричастием-ловушкой)\n";
+    std::cout << " 1. test_poem.txt (Стих с причастиями и деепричастием - _разучившись_)\n";
     std::cout << " 2. test_mayakovsky.txt (Лесенка Маяковского, тест на пробелы)\n";
     std::cout << " 3. test_prose.txt (Проза без рифм)\n";
     std::cout << " 4. test_empty.txt (Пустой файл)\n";
@@ -205,7 +205,7 @@ void saveReportStep(const std::string& inputFilename, int windowSize,
 
         out << "Упорядоченный список слов по частоте в парах:\n";
         for (size_t i = 0; i < stats.size(); ++i) {
-            out << stats[i].word << " (вхождений: " << stats[i].countInPairs << ", предложения: ";
+            out << stats[i].word << " (вхождений: " << stats[i].countInPairs << ", предложение: ";
             for (size_t s = 0; s < stats[i].sentenceIds.size(); ++s) {
                 out << stats[i].sentenceIds[s] << (s + 1 < stats[i].sentenceIds.size() ? ", " : "");
             }
