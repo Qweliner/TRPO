@@ -1,49 +1,33 @@
-// RhymeDetector.cpp
 #include "RhymeDetector.h"
 #include <iostream>
-#include <cmath>
 #include <algorithm>
 
-// Вход: два слова.
-// Что делает: сравнивает хвосты слов. Рифмой считаются неидентичные слова с совпадением от 3 последних букв (суффикс + окончание).
-// Выход: результат проверки (true/false).
 bool isRhyme(const std::string& w1, const std::string& w2) {
-    // Одинаковые слова не считаются рифмой (тавтология)
+    // Тавтологические пары (одинаковые слова) не являются рифмой
     if (w1 == w2) {
         return false;
     }
 
-    // Для причастий совпадение суффикса и окончания составляет минимум 3 буквы (например, "-ший", "-щий", "-мый")
-    const size_t rhymeSuffixLen = 3;
-    if (w1.length() < rhymeSuffixLen || w2.length() < rhymeSuffixLen) {
+    const size_t minSuffixLen = 3;
+    if (w1.length() < minSuffixLen || w2.length() < minSuffixLen) {
         return false;
     }
 
-    std::string tail1 = w1.substr(w1.length() - rhymeSuffixLen);
-    std::string tail2 = w2.substr(w2.length() - rhymeSuffixLen);
+    std::string tail1 = w1.substr(w1.length() - minSuffixLen);
+    std::string tail2 = w2.substr(w2.length() - minSuffixLen);
 
     return (tail1 == tail2);
 }
 
-// Вход: вектор токенов причастий и окно поиска.
-// Что делает: перебирает пары и формирует список созвучий в пределах окна предложений.
-// Выход: вектор пар рифм.
-std::vector<RhymePair> findRhymePairs(const std::vector<WordToken>& tokens, int windowSize) {
+std::vector<RhymePair> findRhymePairs(const std::vector<WordToken>& tokens) {
     std::vector<RhymePair> pairs;
     if (tokens.size() < 2) {
         return pairs;
     }
 
+    // Поиск рифмующихся пар по всему массиву токенов без ограничений на окно
     for (size_t i = 0; i < tokens.size(); ++i) {
         for (size_t j = i + 1; j < tokens.size(); ++j) {
-            // Если задано окно поиска, проверяем расстояние между предложениями
-            if (windowSize > 0) {
-                int dist = std::abs(tokens[j].sentenceId - tokens[i].sentenceId);
-                if (dist > windowSize) {
-                    continue;
-                }
-            }
-
             if (isRhyme(tokens[i].word, tokens[j].word)) {
                 RhymePair p;
                 p.word1 = tokens[i].word;
@@ -54,7 +38,7 @@ std::vector<RhymePair> findRhymePairs(const std::vector<WordToken>& tokens, int 
             }
         }
 
-        // Индикация работы каждые 50 шагов внешнего цикла
+        // Индикация процесса обработки каждые 50 шагов
         if ((i + 1) % 50 == 0) {
             std::cout << ".";
         }
@@ -63,75 +47,50 @@ std::vector<RhymePair> findRhymePairs(const std::vector<WordToken>& tokens, int 
     return pairs;
 }
 
-// Вход: список пар рифм.
-// Что делает: агрегирует частоту каждого слова и объединяет номера предложений без дубликатов.
-// Выход: вектор статистики по словам.
-std::vector<WordStat> buildStatistics(const std::vector<RhymePair>& pairs) {
-    std::vector<WordStat> stats;
-
-    for (size_t i = 0; i < pairs.size(); ++i) {
-        const RhymePair& p = pairs[i];
-
-        // Обработка word1
-        int idx1 = -1;
-        for (size_t k = 0; k < stats.size(); ++k) {
-            if (stats[k].word == p.word1) {
-                idx1 = static_cast<int>(k);
-                break;
-            }
-        }
-        if (idx1 == -1) {
-            WordStat newStat;
-            newStat.word = p.word1;
-            newStat.countInPairs = 1;
-            newStat.sentenceIds.push_back(p.sentenceId1);
-            stats.push_back(newStat);
-        }
-        else {
-            stats[idx1].countInPairs++;
-            if (std::find(stats[idx1].sentenceIds.begin(), stats[idx1].sentenceIds.end(), p.sentenceId1) == stats[idx1].sentenceIds.end()) {
-                stats[idx1].sentenceIds.push_back(p.sentenceId1);
-            }
-        }
-
-        // Обработка word2
-        int idx2 = -1;
-        for (size_t k = 0; k < stats.size(); ++k) {
-            if (stats[k].word == p.word2) {
-                idx2 = static_cast<int>(k);
-                break;
-            }
-        }
-        if (idx2 == -1) {
-            WordStat newStat;
-            newStat.word = p.word2;
-            newStat.countInPairs = 1;
-            newStat.sentenceIds.push_back(p.sentenceId2);
-            stats.push_back(newStat);
-        }
-        else {
-            stats[idx2].countInPairs++;
-            if (std::find(stats[idx2].sentenceIds.begin(), stats[idx2].sentenceIds.end(), p.sentenceId2) == stats[idx2].sentenceIds.end()) {
-                stats[idx2].sentenceIds.push_back(p.sentenceId2);
-            }
+// Вспомогательная функция добавления слова в статистику без дублирования номеров предложений
+static void addWordToStats(std::vector<WordStat>& stats, const std::string& word, int sentenceId) {
+    int foundIdx = -1;
+    for (size_t i = 0; i < stats.size(); ++i) {
+        if (stats[i].word == word) {
+            foundIdx = static_cast<int>(i);
+            break;
         }
     }
 
+    if (foundIdx == -1) {
+        WordStat newStat;
+        newStat.word = word;
+        newStat.countInPairs = 1;
+        newStat.sentenceIds.push_back(sentenceId);
+        stats.push_back(newStat);
+    }
+    else {
+        stats[foundIdx].countInPairs++;
+        // Добавляем номер предложения только в том случае, если его еще нет в списке
+        if (std::find(stats[foundIdx].sentenceIds.begin(), stats[foundIdx].sentenceIds.end(), sentenceId) == stats[foundIdx].sentenceIds.end()) {
+            stats[foundIdx].sentenceIds.push_back(sentenceId);
+        }
+    }
+}
+
+std::vector<WordStat> buildStatistics(const std::vector<RhymePair>& pairs) {
+    std::vector<WordStat> stats;
+    for (size_t i = 0; i < pairs.size(); ++i) {
+        addWordToStats(stats, pairs[i].word1, pairs[i].sentenceId1);
+        addWordToStats(stats, pairs[i].word2, pairs[i].sentenceId2);
+    }
     return stats;
 }
 
-// Вход: массив структур WordStat.
-// Что делает: сортирует методом прямого выбора (Selection Sort) по убыванию частоты вхождений.
-// Выход: нет (модифицирует массив).
 void selectionSortStats(std::vector<WordStat>& stats) {
     for (size_t i = 0; i < stats.size(); ++i) {
         size_t bestIdx = i;
         for (size_t j = i + 1; j < stats.size(); ++j) {
-            // Критерий 1: по убыванию частоты
+            // Сортировка по убыванию частоты вхождения
             if (stats[j].countInPairs > stats[bestIdx].countInPairs) {
                 bestIdx = j;
             }
-            // Критерий 2 (при равенстве): по алфавиту (возрастание)
+            // При равной частоте — упорядочивание по алфавиту
             else if (stats[j].countInPairs == stats[bestIdx].countInPairs) {
                 if (stats[j].word < stats[bestIdx].word) {
                     bestIdx = j;

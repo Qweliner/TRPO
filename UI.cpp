@@ -1,19 +1,22 @@
-// UI.cpp
 #include "UI.h"
+#include "TextParser.h"
+#include "ParticipleDetector.h"
+#include "RhymeDetector.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <conio.h>
 
-// Вход: минимальное и максимальное допустимое значение.
-// Что делает: циклический ввод числа с проверкой диапазона и фильтрацией мусора.
-// Выход: проверенное число.
 int getSafeIntInput(int minVal, int maxVal) {
     std::string line;
     while (true) {
-        std::getline(std::cin, line);
-        if (line.empty()) {
-            std::cout << " Ввод не может быть пустым. Повторите: ";
+        if (!std::getline(std::cin, line)) {
+            return minVal;
+        }
+
+        // Если пользователь просто жмет Enter или пробелы — игнорируем без спама ошибками
+        size_t first = line.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) {
             continue;
         }
 
@@ -25,29 +28,20 @@ int getSafeIntInput(int minVal, int maxVal) {
                 return val;
             }
         }
-        std::cout << " Ошибка: некорректное значение. Введите число от " << minVal << " до " << maxVal << ": ";
+        std::cout << "Некорректный ввод. Введите число от " << minVal << " до " << maxVal << ": ";
     }
 }
 
-// Вход: имя файла.
-// Что делает: проверяет строку на отсутствие запрещенных символов Windows.
-// Выход: true, если имя корректно.
 bool isValidFilename(const std::string& name) {
     if (name.empty()) return false;
     return name.find_first_of("<>:\"/\\|?*") == std::string::npos;
 }
 
-// Вход: имя файла.
-// Что делает: пытается открыть файл для чтения, проверяя его наличие на диске.
-// Выход: true, если файл существует.
 bool fileExists(const std::string& filename) {
     std::ifstream file(filename.c_str());
     return file.is_open();
 }
 
-// Вход: базовое имя без расширения.
-// Что делает: генерирует свободное имя с числовым индексом в скобках.
-// Выход: уникальное имя файла.
 std::string getIndexedFilename(const std::string& baseName) {
     int index = 1;
     while (true) {
@@ -59,53 +53,54 @@ std::string getIndexedFilename(const std::string& baseName) {
     }
 }
 
-// Вход: путь к файлу справки.
-// Что делает: читает файл справки и выводит текст пользователю.
-// Выход: нет.
 void printInstructions(const std::string& helpFile) {
     system("cls");
     std::ifstream file(helpFile.c_str());
     if (!file.is_open()) {
-        std::cout << "\n ! Инструкция не найдена. Положите " << helpFile << " в ту же папку, что и исполняемая программа.\n";
+        std::cout << "Инструкция не найдена. Поместите " << helpFile << " рядом с программой.\n\n";
         return;
     }
-    std::cout << "\n";
     std::string line;
     while (std::getline(file, line)) {
-        std::cout << " " << line << "\n";
+        std::cout << line << "\n";
     }
     std::cout << "\n";
 }
 
-// Вход: нет.
-// Что делает: отображает меню выбора входного файла (пресеты или ручной ввод).
-// Выход: имя файла или пустая строка при отмене.
 std::string selectSourceFileStep() {
     system("cls");
-    std::cout << " ВЫБОР ВХОДНОГО ФАЙЛА:\n\n";
-    std::cout << " 1. test_poem.txt (Стих с причастиями и деепричастием - _разучившись_)\n";
-    std::cout << " 2. test_mayakovsky.txt (Лесенка Маяковского, тест на пробелы)\n";
-    std::cout << " 3. test_prose.txt (Проза без рифм)\n";
-    std::cout << " 4. test_empty.txt (Пустой файл)\n";
-    std::cout << " 5. Ввести имя файла вручную\n";
-    std::cout << " 0. Назад в главное меню\n\n";
-    std::cout << " Выберите пункт: ";
+    std::cout << "ВЫБОР ВХОДНОГО ФАЙЛА:\n\n";
+    std::cout << "1. test_onegin.txt (Текст поэмы с причастиями и пунктуацией)\n";
+    std::cout << "2. test_poem.txt (Стихотворный тест с исключениями)\n";
+    std::cout << "3. test_prose.txt (Проза без рифм)\n";
+    std::cout << "4. test_trash.txt (Тест на мусорные символы и знаки препинания)\n";
+    std::cout << "5. test_empty.txt (Пустой файл)\n";
+    std::cout << "6. Ввести имя файла вручную\n";
+    std::cout << "0. Назад в главное меню\n\n";
+    std::cout << "Выберите пункт: ";
 
-    int choice = getSafeIntInput(0, 5);
+    int choice = getSafeIntInput(0, 6);
     if (choice == 0) return "";
-    if (choice == 1) return "test_poem.txt";
-    if (choice == 2) return "test_mayakovsky.txt";
+    if (choice == 1) return "test_onegin.txt";
+    if (choice == 2) return "test_poem.txt";
     if (choice == 3) return "test_prose.txt";
-    if (choice == 4) return "test_empty.txt";
+    if (choice == 4) return "test_trash.txt";
+    if (choice == 5) return "test_empty.txt";
 
-    std::cout << "\n ! Вводите только название (расширение .txt добавится автоматически, 0 - отмена).\n";
-    std::cout << " Имя входного файла: ";
+    std::cout << "\nВведите имя файла (без расширения .txt, 0 для отмены): ";
     std::string manualName;
     while (true) {
         std::getline(std::cin, manualName);
+        size_t first = manualName.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) {
+            continue;
+        }
+        manualName = manualName.substr(first);
+
         if (manualName == "0") return "";
+
         if (!isValidFilename(manualName)) {
-            std::cout << " Ошибка: имя содержит запрещенные символы (< > : \" / \\ | ? *). Повторите: ";
+            std::cout << "Имя содержит недопустимые символы. Повторите ввод: ";
             continue;
         }
 
@@ -115,97 +110,94 @@ std::string selectSourceFileStep() {
         }
 
         if (!fileExists(fullPath)) {
-            std::cout << " Ошибка: файл не найден. Убедитесь, что файл лежит рядом с программой. Повторите: ";
+            std::cout << "Файл не найден в папке с программой. Повторите ввод: ";
             continue;
         }
         return fullPath;
     }
 }
 
-// Вход: нет.
-// Что делает: диалог настройки окна предложений с возможностью отмены.
-// Выход: размер окна (-1 - весь текст, 1..50 - расстояние, 0 - возврат).
-int selectWindowSizeStep() {
-    system("cls");
-    std::cout << " НАСТРОЙКА ОКНА ПОИСКА РИФМ:\n\n";
-    std::cout << " -1. Поиск по всему тексту (без ограничений)\n";
-    std::cout << "  1. В пределах одного предложения\n";
-    std::cout << "  2..50. В заданных пределах (расстояние между предложениями)\n";
-    std::cout << "  0. Вернуться обратно в главное меню\n\n";
-    std::cout << " Введите размер окна: ";
-
-    return getSafeIntInput(-1, 50);
-}
-
-// Вход: имя файла, параметры, пары и отсортированная статистика.
-// Что делает: сохраняет результат с подтверждением и авто-индексацией по логике автора.
+// Вход: имя файла, список предложений, найденные пары рифм и статистика.
+// Что делает: сохраняет разметку предложений и отчет анализа в два выходных файла строго после подтверждения.
 // Выход: нет.
-void saveReportStep(const std::string& inputFilename, int windowSize,
+void saveReportStep(const std::string& inputFilename,
+    const std::vector<SentenceItem>& sentences,
     const std::vector<RhymePair>& pairs,
     const std::vector<WordStat>& stats) {
-    std::string baseOut = inputFilename;
-    size_t dotPos = baseOut.rfind(".txt");
+    std::string baseName = inputFilename;
+    size_t dotPos = baseName.rfind(".txt");
     if (dotPos != std::string::npos) {
-        baseOut = baseOut.substr(0, dotPos);
-    }
-    std::string autoBase = baseOut + "_рифмы";
-    std::string suggested = autoBase;
-
-    std::cout << "\n СОХРАНЕНИЕ РЕЗУЛЬТАТОВ:\n";
-    if (fileExists(autoBase + ".txt")) {
-        suggested = getIndexedFilename(autoBase);
-        size_t sDot = suggested.rfind(".txt");
-        if (sDot != std::string::npos) suggested = suggested.substr(0, sDot);
-
-        std::cout << " Предупреждение: базовый файл " << autoBase << ".txt уже существует.\n";
+        baseName = baseName.substr(0, dotPos);
     }
 
-    std::cout << " Автоматическое имя: " << suggested << ".txt\n";
-    std::cout << " Нажмите Enter, чтобы применить автоназвание,\n";
-    std::cout << " или введите свое имя (без .txt): ";
+    std::string reportBase = baseName + "_рифмы";
+    std::string suggestedName = reportBase;
+    if (fileExists(reportBase + ".txt")) {
+        suggestedName = getIndexedFilename(reportBase);
+        size_t sDot = suggestedName.rfind(".txt");
+        if (sDot != std::string::npos) {
+            suggestedName = suggestedName.substr(0, sDot);
+        }
+    }
+
+    std::cout << "\nИмя для отчета по умолчанию: " << suggestedName << ".txt\n";
+    std::cout << "Нажмите Enter для подтверждения или введите свое имя (без .txt): ";
 
     std::string userOut;
     std::getline(std::cin, userOut);
-    if (userOut.empty()) {
-        userOut = suggested;
+    size_t f = userOut.find_first_not_of(" \t\r\n");
+    if (f == std::string::npos) {
+        userOut = suggestedName;
+    }
+    else {
+        userOut = userOut.substr(f);
     }
 
-    std::string finalPath = userOut + ".txt";
+    std::string finalReportPath = userOut + ".txt";
+    std::string finalSentencesPath = userOut + "_предложения.txt";
 
-    // Если пользователь вручную ввел уже существующий файл — запрашиваем подтверждение
-    if (fileExists(finalPath)) {
-        std::cout << "\n [ВНИМАНИЕ] Файл " << finalPath << " уже существует!\n";
-        std::cout << " Перезаписать? (Y - да, любой другой ввод - отмена сохранения): ";
+    // Проверка на перезапись: если существует хотя бы один из файлов
+    if (fileExists(finalReportPath) || fileExists(finalSentencesPath)) {
+        std::cout << "\n[ВНИМАНИЕ] Выходные файлы для \"" << userOut << "\" уже существуют!\n";
+        std::cout << "Перезаписать существующие файлы? (Y/N): ";
         std::string ans;
         std::getline(std::cin, ans);
         if (!(ans == "Y" || ans == "y" || ans == "Да" || ans == "да")) {
-            std::cout << " Сохранение отменено пользователем.\n";
+            std::cout << "Сохранение отменено пользователем.\n";
             return;
         }
     }
 
-    std::ofstream out(finalPath.c_str());
+    // Сохранение файла с размеченными предложениями
+    if (saveNumberedSentences(finalSentencesPath, sentences)) {
+        std::cout << "Размеченные предложения сохранены: " << finalSentencesPath << "\n";
+    }
+    else {
+        std::cout << "Ошибка при сохранении файла предложений.\n";
+    }
+
+    // Сохранение файла с рифмами
+    std::ofstream out(finalReportPath.c_str());
     if (!out.is_open()) {
-        std::cout << " Ошибка: не удалось создать файл. Проверьте права на запись в папку.\n";
+        std::cout << "Ошибка при создании файла отчета по рифмам.\n";
         return;
     }
 
-    out << "Отчет поиска однородных рифм (причастия)\n";
+    out << "Отчет анализа текста: поиск однородных рифм (причастия)\n";
     out << "Исходный файл: " << inputFilename << "\n";
-    out << "Окно поиска: " << (windowSize <= 0 ? "весь текст" : std::to_string(windowSize) + " предл.") << "\n";
     out << "Всего найдено рифмующихся пар: " << pairs.size() << "\n\n";
 
     if (!pairs.empty()) {
-        out << "Найденные рифмующиеся пары:\n";
+        out << "Список найденных рифмующихся пар:\n";
         for (size_t i = 0; i < pairs.size(); ++i) {
-            out << i + 1 << ". " << pairs[i].word1 << " (предл. " << pairs[i].sentenceId1
+            out << (i + 1) << ". " << pairs[i].word1 << " (предл. " << pairs[i].sentenceId1
                 << ") - " << pairs[i].word2 << " (предл. " << pairs[i].sentenceId2 << ")\n";
         }
         out << "\n";
 
-        out << "Упорядоченный список слов по частоте в парах:\n";
+        out << "Статистика слов по частоте вхождения в рифмы:\n";
         for (size_t i = 0; i < stats.size(); ++i) {
-            out << stats[i].word << " (вхождений: " << stats[i].countInPairs << ", предложение: ";
+            out << stats[i].word << " (вхождений: " << stats[i].countInPairs << ", предложения: ";
             for (size_t s = 0; s < stats[i].sentenceIds.size(); ++s) {
                 out << stats[i].sentenceIds[s] << (s + 1 < stats[i].sentenceIds.size() ? ", " : "");
             }
@@ -217,70 +209,64 @@ void saveReportStep(const std::string& inputFilename, int windowSize,
     }
 
     out.close();
-    std::cout << "\n Запись отсортированных данных успешно завершена: " << finalPath << "\n";
+    std::cout << "Отчет по рифмам сохранен: " << finalReportPath << "\n";
 }
 
-// Вход: нет.
-// Что делает: сквозное управление сценарием обработки.
-// Выход: нет.
 void runAnalysisPipeline() {
     std::string inputFile = selectSourceFileStep();
-    if (inputFile.empty()) return; // Мгновенный выход в меню без пауз!
-
-    int windowSize = selectWindowSizeStep();
-    if (windowSize == 0) return;   // Мгновенный выход в меню без пауз!
+    if (inputFile.empty()) return;
 
     system("cls");
-    std::cout << " ВЫПОЛНЕНИЕ АНАЛИЗА ДАННЫХ:\n\n";
-    std::cout << " Чтение файла и поиск причастий: ";
-    bool isOk = false;
-    std::vector<WordToken> participles = extractParticiplesFromFile(inputFile, isOk);
+    std::cout << "Обработка файла...\n\n";
 
-    if (!isOk) {
-        std::cout << "\n Ошибка: не удалось открыть файл. Проверьте целостность файла.\n";
-        std::cout << "\n Нажмите любую клавишу для возврата в меню...";
-        _getch();
-        return;
-    }
-    std::cout << "\n Найдено причастий в тексте: " << participles.size() << "\n";
-
-    if (participles.empty()) {
-        std::cout << " Причастия в тексте не обнаружены.\n\n";
-        std::cout << " Сохранить пустой отчет в файл? (Y - да, любая другая клавиша - нет): ";
-        std::string ans;
-        std::getline(std::cin, ans);
-        if (ans == "Y" || ans == "y" || ans == "Да" || ans == "да") {
-            saveReportStep(inputFile, windowSize, {}, {});
-        }
-        std::cout << "\n Нажмите любую клавишу для возврата в меню...";
+    // Проверка словарей №2 (непосредственно перед разбором текста)
+    std::string missingDict;
+    if (!checkDictionaryFiles(missingDict)) {
+        std::cout << "Ошибка: не найден файл словаря: " << missingDict << "\n";
+        std::cout << "Положите данный файл в рабочую папку программы.\n\n";
+        std::cout << "Нажмите любую клавишу для возврата...";
         _getch();
         return;
     }
 
-    std::cout << " Поиск рифмующихся пар: ";
-    int effWindow = (windowSize == -1) ? 0 : windowSize;
-    std::vector<RhymePair> pairs = findRhymePairs(participles, effWindow);
-    std::cout << "\n Найдено рифмующихся пар: " << pairs.size() << "\n";
-
-    if (pairs.empty()) {
-        std::cout << " Рифмующихся пар не найдено.\n\n";
-        std::cout << " Сохранить пустой отчет в файл? (Y - да, любая другая клавиша - нет): ";
-        std::string ans;
-        std::getline(std::cin, ans);
-        if (ans == "Y" || ans == "y" || ans == "Да" || ans == "да") {
-            saveReportStep(inputFile, windowSize, {}, {});
-        }
-        std::cout << "\n Нажмите любую клавишу для возврата в меню...";
+    // Загрузка словарей в память
+    if (!loadDictionaries()) {
+        std::cout << "Ошибка чтения файлов словарей.\n\n";
+        std::cout << "Нажмите любую клавишу для возврата...";
         _getch();
         return;
     }
+
+    std::vector<WordToken> participles;
+    std::vector<SentenceItem> sentences;
+
+    std::cout << "Чтение текста и разметка предложений: ";
+    if (!parseTextFile(inputFile, participles, sentences)) {
+        std::cout << "\nОшибка: не удалось прочитать входной файл.\n\n";
+        std::cout << "Нажмите любую клавишу для возврата...";
+        _getch();
+        return;
+    }
+
+    std::cout << "\nВсего выделено предложений: " << sentences.size() << "\n";
+    std::cout << "Найдено причастий: " << participles.size() << "\n";
+
+    if (sentences.empty()) {
+        std::cout << "Входной файл пуст.\n\n";
+        std::cout << "Нажмите любую клавишу для возврата...";
+        _getch();
+        return;
+    }
+
+    std::cout << "Поиск созвучий: ";
+    std::vector<RhymePair> pairs = findRhymePairs(participles);
+    std::cout << "\nНайдено рифмующихся пар: " << pairs.size() << "\n";
 
     std::vector<WordStat> stats = buildStatistics(pairs);
     selectionSortStats(stats);
 
-    saveReportStep(inputFile, windowSize, pairs, stats);
+    saveReportStep(inputFile, sentences, pairs, stats);
 
-    // Пауза только в самом конце, когда работа РЕАЛЬНО сделана
-    std::cout << "\n Нажмите любую клавишу для возврата в главное меню...";
+    std::cout << "\nОбработка завершена. Нажмите любую клавишу для возврата...";
     _getch();
 }

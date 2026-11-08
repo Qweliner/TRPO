@@ -135,11 +135,16 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="instructions.txt" />
+    <Text Include="participle_exceptions.txt" />
+    <Text Include="participle_short.txt" />
+    <Text Include="participle_suffixes.txt" />
     <Text Include="pcevdokod.txt" />
     <Text Include="test_empty.txt" />
     <Text Include="test_mayakovsky.txt" />
+    <Text Include="test_onegin.txt" />
     <Text Include="test_poem.txt" />
     <Text Include="test_prose.txt" />
+    <Text Include="test_trash.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ParticipleDetector.h" />
