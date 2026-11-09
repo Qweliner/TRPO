@@ -222,7 +222,7 @@ bool saveReportStep(const std::string& inputFilename,
     std::string finalSentencesPath = userBase + "_предложения.txt";
 
     if (fileExists(finalReportPath) || fileExists(finalSentencesPath)) {
-        std::cout << "\n[ВНИМАНИЕ] Файлы для \"" << userBase << "\" уже существуют!\n";
+        std::cout << "\nВнимание: файлы для \"" << userBase << "\" уже существуют!\n";
         std::cout << "Перезаписать существующие файлы? (Y - да, любая другая клавиша - отмена): ";
         char ans = _getch();
         std::cout << ans << "\n";
